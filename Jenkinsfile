@@ -1,4 +1,4 @@
-#jenkins file for e2e
+##jenkins file for e2e
 
 pipeline {
     agent any
@@ -90,7 +90,7 @@ pipeline {
                         echo "Pushing Target Image to ECR: ${targetImage}"
                         sh "docker push ${targetImage}"
                     }
-                    echo "Cleaning Up Local Images"
+                    echo "Cleaning Upp Local Images"
                     sh "docker rmi ${sourceImage} ${targetImage} || true"
                 }
             }
