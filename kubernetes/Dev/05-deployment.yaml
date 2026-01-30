@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dev-flight-service-deployment
+  namespace: dev
+  labels:
+    env: dev
+    app: flight-service
+    layer: frontend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 100%
+  selector:
+    matchLabels:
+      env: dev
+      app: flight-service
+      layer: frontend
+  template:
+    metadata:
+      labels:
+        env: dev
+        app: flight-service
+        layer: frontend
+    spec:
+      # Note: Ensure this SA exists in the 'dev' namespace
+      serviceAccountName: dev-flight-service-sa
+      containers:
+        - name: flight-service
+          image: 966137697484.dkr.ecr.ap-south-1.amazonaws.com/flight-service:latest
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "50m"
+            limits:
+              memory: "100Mi"
+              cpu: "100m"
+          ports:
+            - name: api
+              containerPort: 8080
+          volumeMounts:
+            - name: application-config
+              mountPath: /app/config
+      volumes:
+        - name: application-config
+          configMap:
+            name: dev-flight-service-application-config

@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: preprod-flight-service-ingress
+  namespace: preprod
+  labels:
+    env: preprod
+    app: flight-service
+    layer: frontend
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: preprod-flight-service.yathaarthtalks.in
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: preprod-flight-service-service
+                port:
+                  number: 8080
