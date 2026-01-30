@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dev-flight-service-ingress
+  namespace: dev
+  labels:
+    env: dev
+    app: flight-service
+    layer: frontend
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: dev-flight-service.yathaarthtalks.in
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: dev-flight-service-service
+                port:
+                  number: 8080
