@@ -1,12 +1,12 @@
-##jenkins file for e2e
-
 pipeline {
     agent any
+    
     triggers {
         githubPush()
     }
+
     environment {
-        AWS_ACCOUNT_ID = "533267238276"
+        AWS_ACCOUNT_ID = "966137697484"
         REGION = "ap-south-1"
         ECR_URL = "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
         BRANCH_NAME = "${env.BRANCH_NAME}"
@@ -22,7 +22,16 @@ pipeline {
 
     tools {
         maven 'maven_3.8.4'
-    }stages {
+    }
+
+    stages {
+        stage('Initialize') {
+            steps {
+                echo "Starting Pipeline for branch: ${env.BRANCH_NAME}"
+                echo "Build Number: ${env.BUILD_NUMBER}"
+            }
+        }
+
         stage('Build and Test for Dev') {
             when { branch 'dev' }
             stages {
@@ -30,42 +39,37 @@ pipeline {
                     steps {
                         echo 'Code Compilation in Progress!'
                         sh 'mvn clean compile'
-                        echo 'Code Compilation Completed!'
                     }
                 }
                 stage('Code QA Execution') {
                     steps {
                         echo 'JUnit Test Execution in Progress!'
                         sh 'mvn clean test'
-                        echo 'JUnit Test Execution Completed!'
                     }
                 }
                 stage('Code Package') {
                     steps {
                         echo 'Packaging Code into WAR Artifact'
                         sh 'mvn clean package'
-                        echo 'WAR Artifact Created Successfully!'
                     }
                 }
                 stage('Build & Tag Docker Image') {
                     steps {
                         echo "Building Docker Image: ${ECR_URL}/flight-servicce:${DEV_IMAGE_TAG}"
                         sh "docker build -t ${ECR_URL}/flight-servicce:${DEV_IMAGE_TAG} ."
-                        echo 'Docker Image Built Successfully!'
                     }
                 }
                 stage('Push Docker Image to Amazon ECR') {
                     steps {
-                        echo "Pushing Docker Image to ECR: ${ECR_URL}/flight-servicce:${DEV_IMAGE_TAG}"
                         withDockerRegistry([credentialsId: 'ecr:ap-south-1:ecr-credentials', url: "https://${ECR_URL}"]) {
                             sh "docker push ${ECR_URL}/flight-servicce:${DEV_IMAGE_TAG}"
                         }
-                        echo 'Docker Image Pushed to ECR Successfully!'
                     }
                 }
             }
         }
-		stage('Tag Docker Image for Preprod and Prod') {
+
+        stage('Tag Docker Image for Preprod and Prod') {
             when {
                 anyOf {
                     branch 'preprod'
@@ -74,60 +78,47 @@ pipeline {
             }
             steps {
                 script {
-                    def targetTag = BRANCH_NAME == 'preprod' ? PREPROD_IMAGE_TAG : "prod-flight-servicce-v.1.${BUILD_NUMBER}"
-                    def sourceTag = BRANCH_NAME == 'preprod' ? DEV_IMAGE_TAG : PREPROD_IMAGE_TAG
+                    def targetTag = (BRANCH_NAME == 'preprod') ? PREPROD_IMAGE_TAG : "prod-flight-servicce-v.1.${BUILD_NUMBER}"
+                    def sourceTag = (BRANCH_NAME == 'preprod') ? DEV_IMAGE_TAG : PREPROD_IMAGE_TAG
                     def sourceImage = "${ECR_URL}/flight-servicce:${sourceTag}"
                     def targetImage = "${ECR_URL}/flight-servicce:${targetTag}"
 
-                    echo "Pulling Source Image: ${sourceImage}"
                     withDockerRegistry([credentialsId: 'ecr:ap-south-1:ecr-credentials', url: "https://${ECR_URL}"]) {
-                        def pullStatus = sh(script: "docker pull ${sourceImage}", returnStatus: true)
-                        if (pullStatus != 0) {
-                            error("Source image ${sourceImage} does not exist or failed to pull.")
-                        }
-                        echo "Tagging Source Image as Target: ${targetImage}"
+                        sh "docker pull ${sourceImage}"
                         sh "docker tag ${sourceImage} ${targetImage}"
-                        echo "Pushing Target Image to ECR: ${targetImage}"
                         sh "docker push ${targetImage}"
                     }
-                    echo "Cleaning Upp Local Images"
                     sh "docker rmi ${sourceImage} ${targetImage} || true"
                 }
             }
         }
 
-        stage('Deploy app to dev env') {
+        stage('Deploy to Dev') {
             when { branch 'dev' }
             steps {
                 script {
-                    echo "Deploying to Dev Environment"
-                    def yamlFile = 'kubernetes/dev/05-deployment.yaml'
-                    sh "sed -i 's|<latest>|${DEV_IMAGE_TAG}|g' ${yamlFile}"
+                    sh "sed -i 's|<latest>|${DEV_IMAGE_TAG}|g' kubernetes/dev/05-deployment.yaml"
                     sh "kubectl --kubeconfig=/var/lib/jenkins/.kube/config apply -f kubernetes/dev/"
                 }
             }
         }
 
-        stage('Deploy app to preprod env') {
+        stage('Deploy to Preprod') {
             when { branch 'preprod' }
             steps {
                 script {
-                    echo "Deploying to Preprod Environment"
-                    def yamlFile = 'kubernetes/preprod/05-deployment.yaml'
-                    sh "sed -i 's|<latest>|${PREPROD_IMAGE_TAG}|g' ${yamlFile}"
+                    sh "sed -i 's|<latest>|${PREPROD_IMAGE_TAG}|g' kubernetes/preprod/05-deployment.yaml"
                     sh "kubectl --kubeconfig=/var/lib/jenkins/.kube/config apply -f kubernetes/preprod/"
                 }
             }
         }
 
-        stage('Deploy app to prod env') {
+        stage('Deploy to Prod') {
             when { branch 'prod' }
             steps {
                 script {
-                    echo "Deploying to Prod Environment"
-                    def yamlFile = 'kubernetes/prod/05-deployment.yaml'
                     def prodTag = "prod-flight-servicce-v.1.${BUILD_NUMBER}"
-                    sh "sed -i 's|<latest>|${prodTag}|g' ${yamlFile}"
+                    sh "sed -i 's|<latest>|${prodTag}|g' kubernetes/prod/05-deployment.yaml"
                     sh "kubectl --kubeconfig=/var/lib/jenkins/.kube/config apply -f kubernetes/prod/"
                 }
             }
@@ -136,12 +127,10 @@ pipeline {
 
     post {
         success {
-            echo "Deployment to ${env.BRANCH_NAME} environment completed successfully"
+            echo "Deployment to ${env.BRANCH_NAME} completed successfully"
         }
         failure {
-            echo "Deployment to ${env.BRANCH_NAME} environment failed. Check logs for details."
+            echo "Deployment failed. Check logs."
         }
     }
 }
-
-
