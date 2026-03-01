@@ -1,0 +1,12 @@
+# 1. ConfigMap: Application configuration properties
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prod-flight-service-application-config
+  namespace: prod
+  labels:
+    env: prod
+    app: flight-service
+    layer: frontend
+data:
+  application.properties: |-

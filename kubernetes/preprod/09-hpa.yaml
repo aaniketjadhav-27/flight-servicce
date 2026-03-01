@@ -1,0 +1,17 @@
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: preprod-flight-service-hpa
+  namespace: preprod
+  labels:
+    env: preprod
+    app: flight-service
+    layer: frontend
+spec:
+  maxReplicas: 50
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: preprod-flight-service-deployment
+  targetCPUUtilizationPercentage: 80

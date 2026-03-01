@@ -1,0 +1,12 @@
+  # 1. ConfigMap: Application configuration properties
+  apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: dev-flight-service-application-config
+    namespace: dev
+    labels:
+      env: dev
+      app: flight-service
+      layer: frontend
+  data:
+    application.properties: |-
