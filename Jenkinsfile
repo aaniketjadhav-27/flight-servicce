@@ -6,7 +6,7 @@ pipeline {
         githubPush()
     }
     environment {
-        AWS_ACCOUNT_ID = "533267238276"
+        AWS_ACCOUNT_ID = "966137697484"
         REGION = "ap-south-1"
         ECR_URL = "${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
         BRANCH_NAME = "${env.BRANCH_NAME}"
@@ -21,7 +21,7 @@ pipeline {
     }
 
     tools {
-        maven 'maven_3.8.4'
+        maven 'maven_3.9.12'
     }stages {
         stage('Build and Test for Dev') {
             when { branch 'dev' }
