@@ -21,7 +21,7 @@ pipeline {
     }
 
     tools {
-        maven 'maven_3.9.12'
+        maven 'maven_3.9.16'
     }stages {
         stage('Build and Test for Dev') {
             when { branch 'dev' }
